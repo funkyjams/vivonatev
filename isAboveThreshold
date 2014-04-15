@@ -1,0 +1,36 @@
+#!/bin/env python
+
+import sys
+import re
+
+def isAboveThreshold(log, threshold):
+	lines = log.readlines()
+
+	for line in lines:
+		if re.search("aligned 0 times", line):
+			splitline = line.split()
+			percentage = splitline[1]
+			#num = float(percentage[1:6])
+			num = float(line.split()[1][1:6])
+			# print num
+			if (num > (100 - threshold)):
+				return False
+			else:
+				return True
+
+	raise Exception("no correct line in log") 
+
+if __name__=="__main__":
+
+	if len(sys.argv) != 3:
+		print "Wrong usage: "
+		print "isAboveThreshold logfile threshold"
+		sys.exit()
+
+	logfile = open(sys.argv[1], 'r')
+	threshold = float(sys.argv[2])
+	try:
+		print isAboveThreshold(logfile, threshold)
+	except Exception:
+		print False
+		

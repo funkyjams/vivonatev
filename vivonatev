@@ -1,0 +1,220 @@
+#!/bin/env python2.7
+
+# Define Custom Exceptions:
+class NoIndex(Exception):
+	def __init__(self, message):
+		self.message = message
+
+class BelowThreshold(Exception):
+	def __init__(self, message):
+		self.message = message
+class WrongLog(Exception):
+	def __init__(self, message):
+		self.message = message
+
+
+
+# Define functions
+def exit(string):
+	print string
+	parser.print_help()
+	sys.exit()
+
+
+def run(cmd, logfile):
+
+	# logfile = open(logpath, 'a')
+	# logfile.flush()
+	logfile.write('Running: ' + cmd + '\n')
+
+	process = subprocess.Popen(cmd.split(), stdout=logfile, stderr=logfile)
+	# process.wait()
+	process.communicate()[0]
+	process.wait()
+
+
+def isAboveThreshold(logfile, t):
+	return False
+	import re
+	lines=logfile.readlines()
+	if t == 0:
+		return true
+
+	for line in lines:
+		if re.search("aligned 0 times", line):
+			num = float(line.split()[1][1:6])
+
+			if (num > (100 - t)):
+				return False
+			else:
+				return True
+
+	raise WrongLog("No alignement information in log file")
+
+
+
+def loop(args, refname, logpath):
+	
+	log = open(logpath, 'a+')
+
+	if (not os.path.exists("temp.fq")):
+		precommand = "cp " + args['input'] + " temp.fq"
+		run(precommand, log)
+	
+
+	run("bowtie2 -p 4 -U temp.fq -x " + args['directory'] + refname[:-1] + " -S temp.sam", log)
+	run("samtools view -bS -o temp.bam temp.sam", log)
+
+	try:
+		if (isAboveThreshold(log, args['threshold']) or not args['sampling']):
+			if args['filter_out']:
+				run("samtools view -b -f 4 temp.bam -o unmapped-temp.bam", log)
+				run("rm temp.fq", log)
+				run("bam2fq unmapped-temp.bam temp.fq", log)
+				run("rm unmapped-temp.bam", log)
+			if args['coverage']:
+				run("samtools sort temp.bam temp.sorted", log)
+				run("samtools mpileup -BQ0 -d 10000 -f " + args['directory'] + refname[:-1] + " temp.sorted.bam > coverage.txt", log)
+				run("mv coverage.txt " + refname[:-1] + "_CoverageVector", log)
+				run("rm temp.sorted.bam", log)
+		else:
+			# run("rm temp.sam temp.bam", log)
+			raise BelowThreshold("")
+	except WrongLog:
+		log.write("Error:\nNo alignemtent in log file\nEnding job")
+	except BelowThreshold:
+		log.write("Warning:\nAlignement ratio below threshold\n Wrapping up")
+	finally:
+		run("rm temp.sam temp.bam", log)
+		log.close()
+	
+	
+	
+
+# Main function:
+def main(args):
+	"""Main loop"""
+
+	try:
+		if (not os.path.isdir(args['directory'])):
+			raise ValueError("Directory does not exist")
+		index = open(args['directory'] + '/name_index', 'r')
+		
+	except IOError:
+		raise NoIndex("The reference directory does not exist or does not contain name_index")
+		exit("\n")
+	else:
+		# do this
+
+		lines = index.readlines()
+		for name in lines:	
+			#commandlist = getCommandList(args, name)
+
+			print "Filtering: " + name[:-1]
+			
+			if (not args['logfile'] == ''):
+				logpath = args['logfile'] + "_" + name[:-1]
+				# log = open(args['logfile'] + "_" + name[:-1], 'a')
+			else:	
+				# log = open("temp-log_" + name[:-1], "a")
+				logpath = "temp-log_" + name[:-1]
+			#try:
+			loop(args, name, logpath)
+			#except BelowThreshold as ex:
+			#	print ex
+			#finally:
+			#	log = open(logpath, 'a')
+			#	run("rm temp.sam temp.bam", log)
+				# log.close()
+			
+
+	
+			"""	
+			for command in commandlist:
+				if args['debug']:
+					print command
+				else:
+					if (not args['logfile'] == subprocess.PIPE):
+						log = open(args['logfile'], 'a')
+					else:
+						log = args['logfile']
+					
+					## Cancel command if reads are below threshold
+					try:
+						if (re.match("samtools", command)):
+							if not isAboveThreshold(log, 1):
+								raise BelowThreshold("No need to filter out")
+							else:
+								run(command, log)
+					except BelowThreshold:
+						print "Alignement below threshold. No need to filter out:"
+						print "Command: " + command + " canceled"	
+					except ValueError:
+						print "Skipping command" 
+					else:
+						print "Running: " + command
+						run(command, log)
+						# print "Test"
+					#print "Running: " + command + "\n"
+					#process=subprocess.Popen(command.split(), stdout=log, stderr=log )
+					#process.communicate()[0]
+			"""
+
+		lastcommand = "mv temp.fq output.fq"
+		print "Running: " + lastcommand
+		process = subprocess.Popen(lastcommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		process.communicate()[0]
+		
+	
+	print "Main done"
+	
+
+
+
+# Prepare Arguments: 
+if __name__ == "__main__":
+	
+	import os
+	import sys
+	import argparse
+	import subprocess
+	import re
+	# import classes
+	
+	parser = argparse.ArgumentParser(description='Pipeline project',
+					prog='vivonatev', usage='%(prog)s -i',
+					add_help=False)
+
+	required = parser.add_argument_group('Required Arguments')
+	required.add_argument('-i', '--input', default='', help='input files')
+	required.add_argument('-d', '--directory', default='', help='Directory of positive references')
+
+	optional = parser.add_argument_group('Optional Arguments')
+	optional.add_argument('-h', '--help', action='help', help='This helpful message')
+	optional.add_argument('-l', '--logfile', default='', help='store output in logfile, else prints to stdout')
+	optional.add_argument('-t', '--threshold', type=float, default=1, help='threshold of aligned reads in order to perform filter and coverage actions (in percentage)')
+	optional.add_argument('-F', '--filter-out', action='store_true', help='Filter out positive references')
+	optional.add_argument('-C', '--coverage', action='store_true', help='Generate coverage vectore for each reference')
+	optional.add_argument('-D', '--debug', action='store_true', help='Print command list instead of executing them')
+	optional.add_argument('-S', '--sampling', action='store_true', help='If only running samples, don\'t perform filtering or coverage action')
+	
+	args = vars( parser.parse_args() )
+
+	## Check input validity
+	
+	if (args['input'] is ''):
+		exit('Input must be specified')
+	if (args['directory'] is ''):
+		exit('Positive references directory must be specified')
+	
+	
+	try:
+		main(args)
+	except NoIndex:
+		print("The input directory must contain name_index")
+	except ValueError:
+		print("The input directory does not exist or cannot be found")
+	finally:
+		print "Program done"
+		
+	
