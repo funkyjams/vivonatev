@@ -37,15 +37,20 @@ def run(cmd, logfile):
 	process.wait()
 
 
-def isAboveThreshold(logfile, t):
-	return False
+def isAboveThreshold(logpath, t):
 	import re
-	lines=logfile.readlines()
-	if t == 0:
-		return true
 
+	logfile = open(logpath, 'r')
+	
+	if t == 0:
+		return True
+
+	lines = logfile.readlines()
 	for line in lines:
 		if re.search("aligned 0 times", line):
+			if float(line.split()[0]) == 0:
+				return False
+
 			num = float(line.split()[1][1:6])
 
 			if (num > (100 - t)):
@@ -53,37 +58,46 @@ def isAboveThreshold(logfile, t):
 			else:
 				return True
 
+	logfile.close()
+
 	raise WrongLog("No alignement information in log file")
 
 
 
 def loop(args, refname, logpath):
 	
-	log = open(logpath, 'a+')
+	log = open(logpath, 'w+')
 
-	if (not os.path.exists("temp.fq")):
-		precommand = "cp " + args['input'] + " temp.fq"
-		run(precommand, log)
+#	if (not os.path.exists("temp.fq")):
+#		precommand = "cp " + args['input'] + " temp.fq"
+#		run(precommand, log)
 	
 
-	run("bowtie2 -p 4 -U temp.fq -x " + args['directory'] + refname[:-1] + " -S temp.sam", log)
-	run("samtools view -bS -o temp.bam temp.sam", log)
+	run("bowtie2 -p " + str(args['bowtie_cores']) + " -U temp.fq -x " + args['directory'] + refname[:-1] + " -S temp.sam", log)
+	# run("samtools view -bS -o temp.bam temp.sam", log)
 
 	try:
-		if (not args['sampling'] or isAboveThreshold(log, args['threshold'])):
+		if args['sampling']:
+			pass
+		elif (not isAboveThreshold(logpath, args['threshold'])):
+			raise BelowThreshold('Mapping rate is too low')
+		else:
+			run("samtools view -bS -o temp.bam temp.sam", log)
 			if args['filter_out']:
+				print "Filtering"
 				run("samtools view -b -f 4 temp.bam -o unmapped-temp.bam", log)
 				run("rm temp.fq", log)
 				run("bam2fq unmapped-temp.bam temp.fq", log)
 				run("rm unmapped-temp.bam", log)
 			if args['coverage']:
+				print "Generating Coverage vector"
 				run("samtools sort temp.bam temp.sorted", log)
 				run("samtools mpileup -BQ0 -d 10000 -f " + args['directory'] + refname[:-1] + " temp.sorted.bam > coverage.txt", log)
 				run("mv coverage.txt " + refname[:-1] + "_CoverageVector", log)
 				run("rm temp.sorted.bam", log)
-		else:
-			# run("rm temp.sam temp.bam", log) --> Ran when catching exception
-			raise BelowThreshold("")
+			run("rm temp.bam", log)
+
+
 	except WrongLog as e:
 		print e
 		log.write("Error:\nNo alignemtent in log file\nEnding job")
@@ -91,7 +105,7 @@ def loop(args, refname, logpath):
 		print e
 		log.write("Warning:\nAlignement ratio below threshold\nWrapping up")
 	finally:
-		run("rm temp.sam temp.bam", log)
+		run("rm temp.sam", log)
 		log.close()
 	
 	
@@ -123,10 +137,16 @@ def main(args):
 	#else:
 	# Normal Development:
 
+	emptylog = open('/dev/null', 'w')	
+	run("cp " + args['input'] + " temp.fq", emptylog)
+	emptylog.close()
+
 	lines = index.readlines()
+	
+
 	for name in lines:	
 
-		print "Filtering: " + name[:-1]
+		print "Mapping: " + name[:-1]
 		
 		if (not args['logfile'] == ''):
 			logpath = args['logfile'] + "_" + name[:-1]
@@ -171,7 +191,8 @@ if __name__ == "__main__":
 	optional.add_argument('-h', '--help', action='help', help='This helpful message')
 	optional.add_argument('-l', '--logfile', default='', help='store output in logfile, else prints to stdout')
 	optional.add_argument('-n', '--name_index', default='', help='file containing the list of references (in \'directory\' to check')
-	optional.add_argument('-t', '--threshold', type=float, default=1, help='threshold of aligned reads in order to perform filter and coverage actions (in percentage)')
+	optional.add_argument('-bc', '--bowtie-cores', default=1, type=int, help='number of cores to use when running bowtie2 mapping')
+	optional.add_argument('-t', '--threshold', type=float, default=0, help='threshold of aligned reads in order to perform filter and coverage actions (in percentage)')
 	optional.add_argument('-F', '--filter-out', action='store_true', help='Filter out positive references')
 	optional.add_argument('-C', '--coverage', action='store_true', help='Generate coverage vectore for each reference')
 	optional.add_argument('-D', '--debug', action='store_true', help='Print command list instead of executing them')

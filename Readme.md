@@ -1,4 +1,4 @@
-Vivonatev
+Vvonatev
 =========
 
 
@@ -23,12 +23,21 @@ Filtering option. When going through each reference, filter out the mapped reads
 ###### -C
 Coverage option. For each reference, generate coverage vector.
 ###### -t x
-Threshold. Limits -C and -F options to reads that mapped to at least x% of input file.
+Threshold. Limits -C and -F options to reads that mapped to at least x% of input file. (def 0)
+###### -n index_file
+File containing the refence names in '-d' to map to. default is 'directory/name_index'
+###### -bc N
+Allows the user to specify the number of cores to run bowtie2 mapping with. (def 1)
+###### -S
+Sampling mode, disable -C, -F and exceptions for threshold below -t. Saves time by canceling samtools execution
 ###### -D
 Debug mode. TBD
 
 
-### Future Improvements
+### Requirements:
+* Bowtie2
+* Samtools
 
-* allow user to determine the number of processors used when running bowtie2
-* allow user to include his own name index
+
+### Future Improvements
+* TBA

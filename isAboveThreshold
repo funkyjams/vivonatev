@@ -4,15 +4,18 @@ import sys
 import re
 
 def isAboveThreshold(log, threshold):
+	if threshold ==0:
+		return True
+
 	lines = log.readlines()
 
 	for line in lines:
 		if re.search("aligned 0 times", line):
-			splitline = line.split()
-			percentage = splitline[1]
+			#splitline = line.split()
+			i#percentage = splitline[1]
 			#num = float(percentage[1:6])
 			num = float(line.split()[1][1:6])
-			# print num
+
 			if (num > (100 - threshold)):
 				return False
 			else:
