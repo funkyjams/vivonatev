@@ -46,4 +46,4 @@ You can move the executable to your path. Before running, you MUST change line 8
 
 
 ### Future Improvements
-* TBA
+* Complete coverage vector function 

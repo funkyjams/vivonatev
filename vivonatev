@@ -68,13 +68,8 @@ def loop(args, refname, logpath):
 	
 	log = open(logpath, 'w+')
 
-#	if (not os.path.exists("temp.fq")):
-#		precommand = "cp " + args['input'] + " temp.fq"
-#		run(precommand, log)
 	
-
 	run("bowtie2 -p " + str(args['bowtie_cores']) + " -U temp.fq -x " + args['directory'] + refname[:-1] + " -S temp.sam", log)
-	# run("samtools view -bS -o temp.bam temp.sam", log)
 
 	try:
 		if args['sampling']:
@@ -87,7 +82,7 @@ def loop(args, refname, logpath):
 				print "Filtering"
 				run("samtools view -b -f 4 temp.bam -o unmapped-temp.bam", log)
 				run("rm temp.fq", log)
-				run("bam2fq unmapped-temp.bam temp.fq", log)
+				run("java -jar /opt/picard-tools-1.109/SamToFastq.jar I=unmapped-temp.bam F=temp.fq", log)
 				run("rm unmapped-temp.bam", log)
 			if args['coverage']:
 				print "Generating Coverage vector"
@@ -115,7 +110,6 @@ def loop(args, refname, logpath):
 def main(args):
 	"""Main loop"""
 
-	#try:
 	if (not os.path.isdir(args['directory'])):
 		raise ValueError("Directory does not exist")
 
@@ -129,17 +123,8 @@ def main(args):
 	else:
 		index = open(path, 'r')
 			
-	#except NoIndex as e:
-	#	print e
-	#	exit("\n")
 
-
-	#else:
-	# Normal Development:
-
-	emptylog = open('/dev/null', 'w')	
-	run("cp " + args['input'] + " temp.fq", emptylog)
-	emptylog.close()
+	run("cp " + args['input'] + " temp.fq", sys.stdout)
 
 	lines = index.readlines()
 	
@@ -159,7 +144,7 @@ def main(args):
 
 
 	lastcommand = "mv temp.fq output.fq"
-	print "Running: " + lastcommand
+	run(lastcommand, sys.stdout)
 	process = subprocess.Popen(lastcommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	process.communicate()[0]
 		
@@ -177,7 +162,6 @@ if __name__ == "__main__":
 	import argparse
 	import subprocess
 	import re
-	# import clasases
 	
 	parser = argparse.ArgumentParser(description='Pipeline project',
 					prog='vivonatev', usage='%(prog)s -i',
@@ -191,7 +175,7 @@ if __name__ == "__main__":
 	optional.add_argument('-h', '--help', action='help', help='This helpful message')
 	optional.add_argument('-l', '--logfile', default='', help='store output in logfile, else prints to stdout')
 	optional.add_argument('-n', '--name_index', default='', help='file containing the list of references (in \'directory\' to check')
-	optional.add_argument('-bc', '--bowtie-cores', default=1, type=int, help='number of cores to use when running bowtie2 mapping')
+	optional.add_argument('-bc', '--bowtie-cores', default=2, type=int, help='number of cores to use when running bowtie2 mapping')
 	optional.add_argument('-t', '--threshold', type=float, default=0, help='threshold of aligned reads in order to perform filter and coverage actions (in percentage)')
 	optional.add_argument('-F', '--filter-out', action='store_true', help='Filter out positive references')
 	optional.add_argument('-C', '--coverage', action='store_true', help='Generate coverage vectore for each reference')
