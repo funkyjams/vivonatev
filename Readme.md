@@ -37,7 +37,12 @@ Debug mode. TBD
 ### Requirements:
 * Bowtie2
 * Samtools
+* picard-tools
 * python2.7
+
+
+### Installation
+You can move the executable to your path. Before running, you MUST change line 85 to match where picard-tools is installed on your computer.  
 
 
 ### Future Improvements
