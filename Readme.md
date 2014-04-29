@@ -27,7 +27,9 @@ Threshold. Limits -C and -F options to reads that mapped to at least x% of input
 ###### -n index_file
 File containing the refence names in '-d' to map to. default is 'directory/name_index'
 ###### -bc N
-Allows the user to specify the number of cores to run bowtie2 mapping with. (def 1)
+Allows the user to specify the number of cores to run bowtie2 mapping with. (def 2)
+###### -sc N
+Allows the user to specify the number of cores when running samtools (def 2)
 ###### -S
 Sampling mode, disable -C, -F and exceptions for threshold below -t. Saves time by canceling samtools execution
 ###### -D

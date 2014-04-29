@@ -38,30 +38,30 @@ def run(cmd, logfile):
 
 
 def isAboveThreshold(logpath, t):
-	import re
-
-	logfile = open(logpath, 'r')
-	
 	if t == 0:
 		return True
 
-	lines = logfile.readlines()
-	for line in lines:
-		if re.search("aligned 0 times", line):
-			if float(line.split()[0]) == 0:
-				return False
-
-			num = float(line.split()[1][1:6])
-
-			if (num > (100 - t)):
-				return False
-			else:
-				return True
-
-	logfile.close()
+	else:
+		import re
+		logfile = open(logpath, 'r')
+	
+		lines = logfile.readlines()
+		for line in lines:
+			if re.search("aligned 0 times", line):
+				if float(line.split()[0]) == 0:
+					return False
+	
+				num = float(line.split()[1][1:6])
+	
+				if (num > (100 - t)):
+					return False
+				else:
+					return True
+	
+		logfile.close()
 
 	raise WrongLog("No alignement information in log file")
-
+	return 0
 
 
 def loop(args, refname, logpath):
@@ -77,7 +77,7 @@ def loop(args, refname, logpath):
 		elif (not isAboveThreshold(logpath, args['threshold'])):
 			raise BelowThreshold('Mapping rate is too low')
 		else:
-			run("samtools view -bS -o temp.bam temp.sam", log)
+			run("samtools view -bS -o temp.bam " + "-@ " + str(args['samtools_cores']) + " temp.sam", log)
 			if args['filter_out']:
 				print "Filtering"
 				run("samtools view -b -f 4 temp.bam -o unmapped-temp.bam", log)
@@ -138,15 +138,16 @@ def main(args):
 		else:	
 			logpath = "temp-log_" + name[:-1]
 	
-			
+		# try	
 		loop(args, name, logpath)
-		
+		# except 
 
-
-	lastcommand = "mv temp.fq output.fq"
-	run(lastcommand, sys.stdout)
-	process = subprocess.Popen(lastcommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	process.communicate()[0]
+	if args['filter_out']:
+		lastcommand = "mv temp.fq output.fq"
+		run(lastcommand, sys.stdout)
+		# print "Running: " + lastcommand
+		process = subprocess.Popen(lastcommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		process.communicate()[0]
 		
 	
 	print "Main done"
@@ -162,6 +163,7 @@ if __name__ == "__main__":
 	import argparse
 	import subprocess
 	import re
+	# import clasases
 	
 	parser = argparse.ArgumentParser(description='Pipeline project',
 					prog='vivonatev', usage='%(prog)s -i',
@@ -176,6 +178,7 @@ if __name__ == "__main__":
 	optional.add_argument('-l', '--logfile', default='', help='store output in logfile, else prints to stdout')
 	optional.add_argument('-n', '--name_index', default='', help='file containing the list of references (in \'directory\' to check')
 	optional.add_argument('-bc', '--bowtie-cores', default=2, type=int, help='number of cores to use when running bowtie2 mapping')
+	optional.add_argument('-sc', '--samtools-cores', default=2, type=int, help='number of cores to when running samtools')
 	optional.add_argument('-t', '--threshold', type=float, default=0, help='threshold of aligned reads in order to perform filter and coverage actions (in percentage)')
 	optional.add_argument('-F', '--filter-out', action='store_true', help='Filter out positive references')
 	optional.add_argument('-C', '--coverage', action='store_true', help='Generate coverage vectore for each reference')
