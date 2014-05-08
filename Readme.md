@@ -56,4 +56,3 @@ You can move the executable to your path. Before running, you MUST change line 8
 ### Future Improvements
 * Complete coverage vector function 
 * Implement option for other alignment tool (maybe bwa?)
-sdf
