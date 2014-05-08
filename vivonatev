@@ -29,7 +29,6 @@ def exit(string):
 
 
 def run(cmd, logfile):
-
 	logfile.write('Running: ' + cmd + '\n')
 
 	process = subprocess.Popen(cmd.split(), stdout=logfile, stderr=logfile)
@@ -65,24 +64,33 @@ def isAboveThreshold(logpath, t):
 
 
 def loop(args, refname, logpath):
-	
-	log = open(logpath, 'w+')
-
-	
-	run("bowtie2 -p " + str(args['bowtie_cores']) + " -U temp.fq -x " + args['directory'] + refname[:-1] + " -S temp.sam", log)
-
 	try:
+		log = open(logpath, 'w+')
+
+		# ToDo: throw exception if dir/refname DNE
+		if (not args['input'] is ''):
+			run("bowtie2 -p " + str(args['bowtie_cores']) + " -U temp.fq -x " + args['directory'] + refname[:-1] + " -S temp.sam", log)
+		else:
+			run("bowtie2 -p " + str(args['bowtie_cores']) + " -1 temp_1.fq -2 temp_2.fq -x " + args['directory'] + refname[:-1] + " -S temp.sam", log)
+
 		if args['sampling']:
 			pass
 		elif (not isAboveThreshold(logpath, args['threshold'])):
 			raise BelowThreshold('Mapping rate is too low')
 		else:
 			run("samtools view -bS -o temp.bam " + "-@ " + str(args['samtools_cores']) + " temp.sam", log)
+
 			if args['filter_out']:
 				print "Filtering"
-				run("samtools view -b -f 4 temp.bam -o unmapped-temp.bam", log)
-				run("rm temp.fq", log)
-				run("java -jar /opt/picard-tools-1.109/SamToFastq.jar I=unmapped-temp.bam F=temp.fq", log)
+				run("samtools view -b -f 4 temp.bam -o unmapped-temp.bam -@ " + str(args['samtools_cores']), log)
+
+				if (not args['input'] is ''):
+					run("rm temp.fq", log)
+					run("java -jar /opt/picard-tools-1.109/SamToFastq.jar I=unmapped-temp.bam F=temp.fq", log)
+				else:
+					run("rm temp_1.fq temp_2.fq", log)
+					run("java -jar /opt/picard-tools-1.109/SamToFastq.jar I=unmapped-temp.bam F=temp_1.fq F2=temp_2.fq FU=/dev/null", log)
+				
 				run("rm unmapped-temp.bam", log)
 			if args['coverage']:
 				print "Generating Coverage vector"
@@ -123,8 +131,18 @@ def main(args):
 	else:
 		index = open(path, 'r')
 			
-
-	run("cp " + args['input'] + " temp.fq", sys.stdout)
+	if (not args['input'] is ''):
+		if not os.path.exists("temp.fq"):
+			run("cp " + args['input'] + " temp.fq", sys.stdout)
+		else:
+			print "Fq tempfile already exists"
+	else:
+		if not os.path.exists("temp_1.fq"):
+		
+			run("cp " + args['mate_1'] + " temp_1.fq", sys.stdout)
+			run("cp " + args['mate_2'] + " temp_2.fq", sys.stdout)
+		else:
+			print "Fq tempfiles already exist"	
 
 	lines = index.readlines()
 	
@@ -143,11 +161,14 @@ def main(args):
 		# except 
 
 	if args['filter_out']:
-		lastcommand = "mv temp.fq output.fq"
-		run(lastcommand, sys.stdout)
-		# print "Running: " + lastcommand
-		process = subprocess.Popen(lastcommand.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-		process.communicate()[0]
+		if (args['input'] is not ''):
+			lastcommand = "mv temp.fq output.fq"
+			run(lastcommand, sys.stdout)
+		else:
+			lastcommand1 = "mv temp_1.fq output_1.fq"
+			lastcommand2 = "mv temp_2.fq output_2.fq"
+			run(lastcommand1, sys.stdout)
+			run(lastcommand2, sys.stdout)
 		
 	
 	print "Main done"
@@ -163,18 +184,20 @@ if __name__ == "__main__":
 	import argparse
 	import subprocess
 	import re
-	# import clasases
+
 	
 	parser = argparse.ArgumentParser(description='Pipeline project',
 					prog='vivonatev', usage='%(prog)s -i',
 					add_help=False)
 
 	required = parser.add_argument_group('Required Arguments')
-	required.add_argument('-i', '--input', default='', help='input files')
+	required.add_argument('-i', '--input', default='', help='input files (can be replaced by paired inputs -m1 and -m2)')
 	required.add_argument('-d', '--directory', default='', help='Directory of positive control references')
 
 	optional = parser.add_argument_group('Optional Arguments')
 	optional.add_argument('-h', '--help', action='help', help='This helpful message')
+	optional.add_argument('-m1', '--mate-1', default='', help='Mated input 1')
+	optional.add_argument('-m2', '--mate-2', default='', help='Mated input 2')
 	optional.add_argument('-l', '--logfile', default='', help='store output in logfile, else prints to stdout')
 	optional.add_argument('-n', '--name_index', default='', help='file containing the list of references (in \'directory\' to check')
 	optional.add_argument('-bc', '--bowtie-cores', default=2, type=int, help='number of cores to use when running bowtie2 mapping')
@@ -190,9 +213,15 @@ if __name__ == "__main__":
 
 	## Check input validity	
 	if (args['input'] is ''):
-		exit('Input must be specified')
+		if (args['mate_1'] is '' or args['mate_2'] is ''):
+			exit('Input must be specified')
+	if (not args['mate_1'] is '' or not args['mate_2'] is ''):
+		if (not args['input'] is ''):
+			exit('Cannot map paired and unpaired reads at the same time')
 	if (args['directory'] is ''):
 		exit('Positive references directory must be specified')
+	if (args['sampling'] and args['logfile'] is ''):
+		exit('Sampling mode requires logfiles, otherwise it does nothing')
 	
 	
 	try:

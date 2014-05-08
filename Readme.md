@@ -13,19 +13,25 @@ This is the work in progress for an alignment pipeline for bowtie2. This pipelin
 
 ##### Mandatory:
 ###### -i inputfile.fastq
-input file. fastq format. Only one input file allowed for now  (See improvements)
+input file. fastq format. (Can be replaced by paired end inputs -m1 and -m2)
 ###### -d reference_directory/
 Directory containing indexes of reference genomes. You must build indexes using bowtie2-build beforehand. Directory may include a name_index file listing the references genome name (provided when running bowtie2-build)
 
 ##### Optional:
+###### -m1 input_paired-end_1.fq
+Paired end input file #1, requires -m2, replaces -i
+###### -m2 input_paired-end_2.fq
+Paired end input file #2, requires -m1
+###### -l output_log
+Prints the output of bowtie2 and samtools to log file. (erased by default)
+###### -n index_file
+File containing the refence names in '-d' to map to. default is 'directory/name_index'
 ###### -F
 Filtering option. When going through each reference, filter out the mapped reads.
 ###### -C
 Coverage option. For each reference, generate coverage vector.
 ###### -t x
 Threshold. Limits -C and -F options to reads that mapped to at least x% of input file. (def 0)
-###### -n index_file
-File containing the refence names in '-d' to map to. default is 'directory/name_index'
 ###### -bc N
 Allows the user to specify the number of cores to run bowtie2 mapping with. (def 2)
 ###### -sc N
@@ -49,3 +55,5 @@ You can move the executable to your path. Before running, you MUST change line 8
 
 ### Future Improvements
 * Complete coverage vector function 
+* Implement option for other alignment tool (maybe bwa?)
+
