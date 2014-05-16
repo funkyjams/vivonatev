@@ -96,7 +96,16 @@ def loop(args, refname, logpath):
 				print "Generating Coverage vector"
 				run("samtools sort temp.bam temp.sorted", log)
 				run("samtools mpileup -BQ0 -d 10000 -f " + args['directory'] + refname[:-1] + " temp.sorted.bam > coverage.txt", log)
-				run("mv coverage.txt " + refname[:-1] + "_CoverageVector", log)
+
+				
+				if args['vector_index'] is '':
+					vector_length = len( open('coverage.txt','r').readlines() )
+				else:
+					# ToDo: find vector_length in file
+					pass
+						
+				run("vect2.py " + vectorlength + " coverage.txt " +refname[:-1] + "_coverage.vect", log)  
+				#run("mv coverage.txt " + refname[:-1] + "_CoverageVector", log)
 				run("rm temp.sorted.bam", log)
 			run("rm temp.bam", log)
 
@@ -187,7 +196,8 @@ if __name__ == "__main__":
 
 	
 	parser = argparse.ArgumentParser(description='Pipeline project',
-					prog='vivonatev', usage='%(prog)s -i',
+					prog='vivonatev', usage='%(prog)s -i input_file -d <path/to/directory/> [optional arguments]',
+					formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position = 75, width = 150),
 					add_help=False)
 
 	required = parser.add_argument_group('Required Arguments')
@@ -200,6 +210,7 @@ if __name__ == "__main__":
 	optional.add_argument('-m2', '--mate-2', default='', help='Mated input 2')
 	optional.add_argument('-l', '--logfile', default='', help='store output in logfile, else prints to stdout')
 	optional.add_argument('-n', '--name_index', default='', help='file containing the list of references (in \'directory\' to check')
+	optional.add_argument('-v', '--vector_index', default='', help='file containing the length of genomes')
 	optional.add_argument('-bc', '--bowtie-cores', default=2, type=int, help='number of cores to use when running bowtie2 mapping')
 	optional.add_argument('-sc', '--samtools-cores', default=2, type=int, help='number of cores to when running samtools')
 	optional.add_argument('-t', '--threshold', type=float, default=0, help='threshold of aligned reads in order to perform filter and coverage actions (in percentage)')
