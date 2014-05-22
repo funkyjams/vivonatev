@@ -1,0 +1,228 @@
+#!/bin/env python2.7
+# Revive: Vivonatev 0.2.0
+#
+# A python program that which automates mapping, filtering and 
+
+#### Picardtools path
+pcd = "java -jar /opt/picard-tools-1.109/"
+
+
+
+#### Custom Exceptions: ####
+class VivonatevException(Exception):
+	def __init__(self, message):
+		self.message = message
+	def __str__(self):
+		return repr(self.message)
+
+class ArgumentError(VivonatevException):
+	def __init__(self, message):
+		self.message = message
+
+
+
+
+#### Custom Functions ####
+def exit(string, parser):
+	print string
+	parser.print_help()
+	sys.exit()
+
+def shellrun(cmd, out):
+	out = open(out, 'w')
+	
+	process = subprocess.Popen(cmd.split(), stdout=out, stderr=subprocess.PIPE)
+	process.communicate()[0]
+	process.wait()
+
+def run(cmd, logfile):
+	logfile.write("Running: " + cmd + '\n')
+	
+	process = subprocess.Popen(cmd.split(), stdout=logfile, stderr=logfile)
+	process.communicate()[0]
+	process.wait()
+
+
+def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
+	log = open(log_path, 'w+')
+
+	cores = str(args['cores'])
+
+
+	# Bowtie2 Mapping
+	if (not args['input'] is ''):
+		bowtiecmd = "bowtie2 -S temp.sam -p " + cores + " -U temp.fq -x " + dir + ref_name
+	else:
+		bowtiecmd = "bowtie2 -S temp.sam -p " + cores + " -1 temp_1.fq -2 temp_2.fq -x " + dir + ref_name
+
+	print 'Mapping: ' + ref_name
+	run(bowtiecmd, log)
+
+
+	if False:
+		# Check threshold
+		pass
+	else:
+		bamcmd = "samtools view -@ " + cores + " -bS -o temp.bam temp.sam
+		run(bamcmd, log)
+
+		if args['filter']:
+			print 'Filtering'
+			filtercmd = "samtools view -b -f 4 temp.bam -o temp-unmapped.bam -@ " + cores
+			run(filtercmd, log)
+
+			if not args['input'] is '':
+				run('rm temp.fq', log)
+				picardcmd = pcd + "/SamToFastq.jar I=temp-unmapped.bam F=temp.fq"
+			else:
+				run('rm temp_1.fq temp_2.fq', log)
+				picardcmd = pcd + "/SamToFastq.jar I=temp-unmapped.bam F=temp_1.fq F2=temp_2.fq FU=/dev/null"
+			
+			run(picardcmd, log)
+			run('rm temp-unmapped.bam', log)
+
+		if args['cover']:
+			print 'Covering'
+			sortcmd = "samtools sort -@ " + cores + " temp.bam temp.sorted"
+			mpileupcmd = "samtools mpileup -BQ0 -d10000 -f " + ref_path + " temp.sorted.bam"
+			vectcmd = "vect2.py " + ref_length + " coverage.txt " + ref_name + "_cov.vec"
+
+			run(sortcmd, log)
+			shellrun(mpileupcmd, "coverage.txt")
+			run(vectcmd, log)
+
+			run('rm -v temp.sorted.bam coverage.txt', log)
+
+
+		run('rm temp.bam', log)				
+		run('rm -v temp.sam', log)
+		log.close()
+	
+def main(args):
+	"""" Main function """
+	
+	### Redefine arguments
+	if not args['directory'] is '':
+		dir = args['directory']
+	else:
+		dir = os.getcwd()
+	if not args['name_index'] is '':
+		name_index_path = args['name_index']
+	else:
+		name_index_path = dir + '/name_index'
+
+	# Verify validity 
+	if (not os.path.isdir(dir)):
+		raise ArgumentError('directory ' + dir + ' does not exist')
+	elif (not os.path.exists(name_index_path)):
+		raise ArgumentError('file ' + name_index_path + ' does not exist')
+
+
+	## Copy input to temp file
+	if (not args['input'] is ''):
+		if not os.path.exists('temp.fq'):
+			run('cp ' + args['input'] + ' temp.fq', sys.stdout)
+	else:
+		if not os.path.exists('temp_1.fq'):
+			run('cp ' + args['mate_1'] + ' temp_1.fq', sys.stdout)
+			run('cp ' + args['mate_2'] + ' temp_2.fq', sys.stdout)
+
+	# Find References
+	name_index = open(name_index_path, 'r')
+	names = name_index.readlines()
+
+	for line in names:
+		ref_line = line.split()
+
+		ref_name = ref_line[0]
+		ref_path = ref_line[1]
+		if ref_path[0] != '/':
+			ref_path = dir + ref_path
+		if len(ref_line) > 2:
+			ref_length = ref_line[2]
+		else:
+			ref_length = 0
+		
+		if args['keep_log']:
+			log_path = 'log_' + ref_name
+		else:
+			log_path = 'temp.log_' + ref_name
+
+
+
+		try:
+			map2Ref(ref_name, ref_path, ref_length, log_path, dir, args)
+			if not args['keep_log']:
+				run('rm ' + log_path, sys.stdout)
+
+		
+		except VivonatevException as e:
+			run('rm *.sam *.bam', sys.stderr)
+			print e
+	
+	
+
+	if args['filter']:
+		if not args['input'] is '':
+			run('mv temp.fq output.fq', sys.stdout)
+		else:
+			run('mv temp_1.fq output_1.fq', sys.stdout)
+			run('mv temp_2.fq output_2.fq', sys.stdout)
+	else:
+		run('rm -v temp*.fq', sys.stdout)
+
+
+
+
+#### Main ####
+
+if __name__ == "__main__":
+	
+	import os
+	import re
+	import sys
+	import argparse
+	import subprocess
+
+
+	parser = argparse.ArgumentParser(description = 'Pipeline project 0.2.0',
+						prog='revive', usage='%(prog)s {-i input / -m1 input_1 -m2 input_2} {action[s]} [options]',
+						formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position = 75, width = 200),
+						add_help=False)
+	
+	required = parser.add_argument_group('Required Arguments')	
+	required.add_argument('-i', '--input', default = '', help = 'Non-paired input reads')
+	required.add_argument('-m1', '--mate-1', default = '', help = 'Paired input reads, mate 1')
+	required.add_argument('-m2', '--mate-2', default = '', help = 'Paired input reads, mate 2')
+
+	actions = parser.add_argument_group('Action arguments (>1 required)')
+	actions.add_argument('-L', '--keep-log', action = 'store_true', help = '')
+	actions.add_argument('-F', '--filter', action = 'store_true', help = '')
+	actions.add_argument('-C', '--cover', action = 'store_true', help = '')
+	
+	optional = parser.add_argument_group('Optional Arguments')
+	optional.add_argument('-h', '--help', action='help', help = 'This helpful message')
+	optional.add_argument('-d', '--directory', default = '', help = '')
+	optional.add_argument('-n', '--name-index', default = '', help = '')
+	optional.add_argument('-c', '--cores', type = int, default = 2, help = '')
+	optional.add_argument('-t', '--threshold', type = int, default = 0, help = '')
+
+
+	args = vars(parser.parse_args())
+
+
+	## Check Input Validity ##
+	if (args['input'] is ''):
+		if (args['mate_1'] is '' or args['mate_2'] is ''):
+			exit('Input(s) must be specified', parser)
+	if not (args['keep_log'] or args['filter'] or args['cover']):
+		exit('At least one action must be specified', parser)
+	
+	try:
+		main(args)
+	except ArgumentError as e:
+		print e
+	finally:
+		print "Over"	
+
+	
