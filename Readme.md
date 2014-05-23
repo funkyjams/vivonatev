@@ -41,7 +41,13 @@ Threshold. Limits -C and -F options to reads that mapped to at least x% of input
 Allows the user to specify the number of cores when running samtools and  (def 2)
 
 ### Name_index Format
-Name_index is the file containing the information on which references to map:
+Name_index is the file containing the information on which references to map. Format:
+
+| # Ref_name  | Ref_fasta    | Ref_length |
+| ----------- | ------------ | ---------- |
+| hiv         | AF_033819.fa | 9315       |
+| ebv         | NC_007605.fa | 174280     |
+
 
 
 ### Requirements:
@@ -67,7 +73,8 @@ Short program to transform the output of mpileup into a vector. Used with '-C' o
 ### btindexer
 Small script designed to generate the name_index
 
-usage: btindexer name_index ref_name ref_fasta
+usage: 
+    btindexer name_index ref_name ref_fasta
 
 ## Future Improvements
 * Implement option for other alignment tool (maybe bwa?)
