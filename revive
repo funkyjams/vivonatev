@@ -1,11 +1,12 @@
 #!/bin/env python2.7
 # Revive: Vivonatev 0.2.0
 #
-# A python program that which automates mapping, filtering and 
+# A python program that which automates mapping, filtering 
+# and generating coverage vectors
+
 
 #### Picardtools path
 pcd = "java -jar /opt/picard-tools-1.109/"
-
 
 
 #### Custom Exceptions: ####
@@ -19,7 +20,9 @@ class ArgumentError(VivonatevException):
 	def __init__(self, message):
 		self.message = message
 
-
+class IncompleteLog(VivonatevException):
+	def __init__(self, message):
+		self.message = message
 
 
 #### Custom Functions ####
@@ -42,12 +45,28 @@ def run(cmd, logfile):
 	process.communicate()[0]
 	process.wait()
 
+def isBelowThreshold(logpath, threshold):
+	if threshold == 0:
+		return False
+
+	logfile = open(logpath, 'r')
+	loglines = logfile.readlines()
+
+	for line in loglines:
+		if re.search('aligned 0 times', line):
+			num = float(line.split()[1][1:6])
+			
+			if (num > (100 - threshold)):
+				return True
+			else:
+				return False
+	print "No alignement Found" 
+
 
 def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 	log = open(log_path, 'w+')
 
 	cores = str(args['cores'])
-
 
 	# Bowtie2 Mapping
 	if (not args['input'] is ''):
@@ -58,12 +77,13 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 	print 'Mapping: ' + ref_name
 	run(bowtiecmd, log)
 
-
-	if False:
-		# Check threshold
-		pass
+	if not (args['filter'] or args['cover']):
+		log.write('No other action to take')
+	elif isBelowThreshold(log_path, args['threshold']):
+		log.write('Mapping ratio below threshold. Cancelling filtering / covering')	
+	
 	else:
-		bamcmd = "samtools view -@ " + cores + " -bS -o temp.bam temp.sam
+		bamcmd = "samtools view -@ " + cores + " -bS -o temp.bam temp.sam"
 		run(bamcmd, log)
 
 		if args['filter']:
@@ -98,6 +118,7 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 		run('rm -v temp.sam', log)
 		log.close()
 	
+
 def main(args):
 	"""" Main function """
 	
@@ -149,27 +170,33 @@ def main(args):
 			log_path = 'temp.log_' + ref_name
 
 
-
 		try:
 			map2Ref(ref_name, ref_path, ref_length, log_path, dir, args)
 			if not args['keep_log']:
 				run('rm ' + log_path, sys.stdout)
 
-		
+		except IncompleteLog as e:
+			run('rm *.sam *.bam', sys.stdout)
+			print 'Bowtie2 mapping appears to have failed'
+			print e 		
 		except VivonatevException as e:
 			run('rm *.sam *.bam', sys.stderr)
 			print e
 	
-	
 
+	unlog = open('/dev/null', 'a')
+	
 	if args['filter']:
 		if not args['input'] is '':
-			run('mv temp.fq output.fq', sys.stdout)
+			run('mv temp.fq output.fq', unlog)
 		else:
-			run('mv temp_1.fq output_1.fq', sys.stdout)
-			run('mv temp_2.fq output_2.fq', sys.stdout)
+			run('mv temp_1.fq output_1.fq', unlog)
+			run('mv temp_2.fq output_2.fq', unlog)
 	else:
-		run('rm -v temp*.fq', sys.stdout)
+		if not args['input'] is '':
+			run('rm temp.fq', unlog)
+		else:	
+			run('rm temp_1.fq temp_2.fq', unlog)
 
 
 
@@ -205,7 +232,7 @@ if __name__ == "__main__":
 	optional.add_argument('-d', '--directory', default = '', help = '')
 	optional.add_argument('-n', '--name-index', default = '', help = '')
 	optional.add_argument('-c', '--cores', type = int, default = 2, help = '')
-	optional.add_argument('-t', '--threshold', type = int, default = 0, help = '')
+	optional.add_argument('-t', '--threshold', type = float, default = 0, help = '')
 
 
 	args = vars(parser.parse_args())
