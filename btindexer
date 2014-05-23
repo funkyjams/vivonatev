@@ -1,0 +1,17 @@
+#!/bin/bash
+
+
+if [[ $3 = "" || $4 != "" ]]; then
+	echo "Usage: btindexer index_file ref-name ref-fasta"
+	exit 1
+fi
+
+name_index=$1
+ref_name=$2
+ref_fasta=$3
+
+
+genlen=$(cat $ref_fasta | grep -v ">" | wc -m)
+
+bowtie2-build $ref_fasta $ref_name
+echo $ref_name $ref_fasta $genlen >> $name_index

@@ -40,6 +40,9 @@ Threshold. Limits -C and -F options to reads that mapped to at least x% of input
 ###### -c N
 Allows the user to specify the number of cores when running samtools and  (def 2)
 
+### Name_index Format
+Name_index is the file containing the information on which references to map:
+
 
 ### Requirements:
 * Bowtie2
@@ -53,15 +56,19 @@ You can move the executable to your path.
 Before running, you MUST change line 7 to match where picard-tools is installed on your computer.  
 
 
-## isAboveThreshold
+## Other Scripts
+### isAboveThreshold
 Simple script the check if a mapping is above a certain treshold. Uses the output of bowtie2.
 Can be usefull when selecting which references to filter/cover.
 
-## vect2.py
+### vect2.py
 Short program to transform the output of mpileup into a vector. Used with '-C' option.
 
+### btindexer
+Small script designed to generate the name_index
 
-### Future Improvements
+usage: btindexer name_index ref_name ref_fasta
+
+## Future Improvements
 * Implement option for other alignment tool (maybe bwa?)
-* Re-implement threshold check
-
+* Implement comments in name_index
