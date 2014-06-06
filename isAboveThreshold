@@ -14,14 +14,14 @@ def isAboveThreshold(log, threshold):
 	lines = log.readlines()
 
 	for line in lines:
-		if re.search("aligned 0 times", line):
-			num = float(line.split()[1][1:6])
+		if re.search("overall alignment rate", line):
+			num = float(line.split()[0][:-1])
 			
-			if (num > (100 - threshold)):
-				return False
-			else:
+			if (num >= threshold):
 				return True
-
+			else:
+				return False
+		
 	raise NoAlignmentException("Alignement not found") 
 
 if __name__=="__main__":
