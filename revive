@@ -31,6 +31,7 @@ def exit(string, parser):
 	parser.print_help()
 	sys.exit()
 
+
 def shellrun(cmd, out):
 	out = open(out, 'w')
 	
@@ -38,12 +39,14 @@ def shellrun(cmd, out):
 	process.communicate()[0]
 	process.wait()
 
+
 def run(cmd, logfile):
 	logfile.write("Running: " + cmd + '\n')
 	
 	process = subprocess.Popen(cmd.split(), stdout=logfile, stderr=logfile)
 	process.communicate()[0]
 	process.wait()
+
 
 def isBelowThreshold(logpath, threshold):
 	if threshold == 0:
@@ -53,10 +56,10 @@ def isBelowThreshold(logpath, threshold):
 	loglines = logfile.readlines()
 
 	for line in loglines:
-		if re.search('aligned 0 times', line):
-			num = float(line.split()[1][1:6])
-			
-			if (num > (100 - threshold)):
+		if re.search('overall alignment rate', line):
+			num = float(line.split()[0][:-1])
+
+			if (num < threshold):
 				return True
 			else:
 				return False
@@ -67,20 +70,22 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 	log = open(log_path, 'w+')
 
 	cores = str(args['cores'])
+	# mode = "--end-to-end"
+	mode = "--local"
 
 	# Bowtie2 Mapping
 	if (not args['input'] is ''):
-		bowtiecmd = "bowtie2 -S temp.sam -p " + cores + " -U temp.fq -x " + dir + ref_name
+		bowtiecmd = "bowtie2 -S temp.sam " + mode + " -p " + cores + " -U temp.fq -x " + dir + ref_name
 	else:
-		bowtiecmd = "bowtie2 -S temp.sam -p " + cores + " -1 temp_1.fq -2 temp_2.fq -x " + dir + ref_name
+		bowtiecmd = "bowtie2 -S temp.sam " + mode + " -p " + cores + " -1 temp_1.fq -2 temp_2.fq -x " + dir + ref_name
 
 	print 'Mapping: ' + ref_name
 	run(bowtiecmd, log)
 
 	if not (args['filter'] or args['cover']):
-		log.write('No other action to take')
+		log.write('No other action to take.\n')
 	elif isBelowThreshold(log_path, args['threshold']):
-		log.write('Mapping ratio below threshold. Cancelling filtering / covering')	
+		log.write('Mapping ratio below threshold. Cancelling filtering / covering\n')	
 	
 	else:
 		bamcmd = "samtools view -@ " + cores + " -bS -o temp.bam temp.sam"
