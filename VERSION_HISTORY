@@ -1,0 +1,26 @@
+# Version History of Vivonatev
+
+0.1.0: First Draft, April 2014
+First draft of the vivonatev project. Provide option to filter out
+references, or only keep the log. Includes isAboveThreshold.py.
+Exception handling.
+
+0.1.1: April 2014
+Support for paired-end input reads.
+
+
+0.2.0: Revive update, May 2014
+Entire rewrite of the code. Now define 'actions' (log, filter and cover).
+Added coverage vector generation. Paired-end bug fixes.
+Redesign of name_index files
+Threshold not finished.
+
+0.2.1: Threshold fix: June 2014
+Bowtie now uses 'local' alignement.
+Threshold function now searches for 'overall alignment' line.
+
+0.2.2: temp.sam bug fix
+Fixed bug which caused temp.sam to not be removed if the references was not
+filtered or covered.
+
+

@@ -26,7 +26,7 @@ Paired fastq input files
 ##### -L 
 Keeps the log for each reference instead of deleting them
 ##### -F 
-Filters all mapped read for each reference
+Filters out all mapped read for each reference
 ##### -C
 Genereage coverage vector for each reference
 
@@ -79,3 +79,4 @@ usage:
 ## Future Improvements
 * Implement option for other alignment tool (maybe bwa?)
 * Implement comments in name_index
+* Option for positive filtering. (keep mapping in separate output file)

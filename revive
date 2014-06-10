@@ -1,5 +1,5 @@
 #!/bin/env python2.7
-# Revive: Vivonatev 0.2.0
+# Revive: Vivonatev 0.2.2
 #
 # A python program that which automates mapping, filtering 
 # and generating coverage vectors
@@ -118,11 +118,12 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 
 			run('rm -v temp.sorted.bam coverage.txt', log)
 
+		run('rm temp.bam', log)
 
-		run('rm temp.bam', log)				
-		run('rm -v temp.sam', log)
-		log.close()
+	run('rm -v temp.sam', log)
+	log.close()
 	
+
 
 def main(args):
 	"""" Main function """
@@ -217,7 +218,7 @@ if __name__ == "__main__":
 	import subprocess
 
 
-	parser = argparse.ArgumentParser(description = 'Pipeline project 0.2.0',
+	parser = argparse.ArgumentParser(description = 'Pipeline project 0.2.2',
 						prog='revive', usage='%(prog)s {-i input / -m1 input_1 -m2 input_2} {action[s]} [options]',
 						formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position = 75, width = 200),
 						add_help=False)
