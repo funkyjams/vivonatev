@@ -8,6 +8,9 @@ This is the work in progress for an alignment pipeline for bowtie2. This pipelin
 * Generate coverage vector of each genome
 * Threshold for filtering and generating coverage vector (saves a lot of time)
 
+### Branch:
+This branch uses the tophat program bams2fastx to transform the bam file into fastq files, instead of picardtools.
+
 ## Revive
 Revive is the new redesigned pipeline.
 

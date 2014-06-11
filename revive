@@ -1,12 +1,9 @@
 #!/bin/env python2.7
-# Revive: Vivonatev 0.2.2
+# Revive: Vivonatev 0.2.2 (tophat version)
 #
 # A python program that which automates mapping, filtering 
 # and generating coverage vectors
 
-
-#### Picardtools path
-pcd = "java -jar /opt/picard-tools-1.109/"
 
 
 #### Custom Exceptions: ####
@@ -77,7 +74,7 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 	if (not args['input'] is ''):
 		bowtiecmd = "bowtie2 -S temp.sam " + mode + " -p " + cores + " -U temp.fq -x " + dir + ref_name
 	else:
-		bowtiecmd = "bowtie2 -S temp.sam " + mode + " -p " + cores + " -1 temp_1.fq -2 temp_2.fq -x " + dir + ref_name
+		bowtiecmd = "bowtie2 -S temp.sam " + mode + " -p " + cores + " -1 temp.1.fq -2 temp.2.fq -x " + dir + ref_name
 
 	print 'Mapping: ' + ref_name
 	run(bowtiecmd, log)
@@ -98,12 +95,13 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 
 			if not args['input'] is '':
 				run('rm temp.fq', log)
-				picardcmd = pcd + "/SamToFastq.jar I=temp-unmapped.bam F=temp.fq"
+				tophatcmd = "bam2fastx -q -A -o temp.fq temp-unmapped.bam"
 			else:
-				run('rm temp_1.fq temp_2.fq', log)
-				picardcmd = pcd + "/SamToFastq.jar I=temp-unmapped.bam F=temp_1.fq F2=temp_2.fq FU=/dev/null"
-			
-			run(picardcmd, log)
+				run('rm temp.1.fq temp.2.fq', log)
+				tophatcmd = "bam2fastx -q -A -o temp.fq -P -N temp-unmapped.bam"
+		
+			print "Running: " + tophatcmd
+			run(tophatcmd, log)
 			run('rm temp-unmapped.bam', log)
 
 		if args['cover']:
@@ -150,9 +148,9 @@ def main(args):
 		if not os.path.exists('temp.fq'):
 			run('cp ' + args['input'] + ' temp.fq', sys.stdout)
 	else:
-		if not os.path.exists('temp_1.fq'):
-			run('cp ' + args['mate_1'] + ' temp_1.fq', sys.stdout)
-			run('cp ' + args['mate_2'] + ' temp_2.fq', sys.stdout)
+		if not os.path.exists('temp.1.fq'):
+			run('cp ' + args['mate_1'] + ' temp.1.fq', sys.stdout)
+			run('cp ' + args['mate_2'] + ' temp.2.fq', sys.stdout)
 
 	# Find References
 	name_index = open(name_index_path, 'r')
@@ -196,13 +194,13 @@ def main(args):
 		if not args['input'] is '':
 			run('mv temp.fq output.fq', unlog)
 		else:
-			run('mv temp_1.fq output_1.fq', unlog)
-			run('mv temp_2.fq output_2.fq', unlog)
+			run('mv temp.1.fq output_1.fq', unlog)
+			run('mv temp.2.fq output_2.fq', unlog)
 	else:
 		if not args['input'] is '':
 			run('rm temp.fq', unlog)
 		else:	
-			run('rm temp_1.fq temp_2.fq', unlog)
+			run('rm temp.1.fq temp.2.fq', unlog)
 
 
 
