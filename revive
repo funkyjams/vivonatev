@@ -97,13 +97,11 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 			if not args['input'] is '':
 				run('rm temp.fq', log)
 				bam2fastqcmd = "bam2fastq -o temp#.fq temp-unmapped.bam"
-				# picardcmd = pcd + "/SamToFastq.jar I=temp-unmapped.bam F=temp.fq"
 			else:
 				run('rm temp_1.fq temp_2.fq', log)
 				bam2fastqcmd = "bam2fastq -o temp#.fq temp-unmapped.bam"
-				# picardcmd = pcd + "/SamToFastq.jar I=temp-unmapped.bam F=temp_1.fq F2=temp_2.fq FU=/dev/null"
 			
-			run(bababam2fastqqqcmd, log)
+			run(bam2fastqcmd, log)
 			run('rm temp-unmapped.bam', log)
 
 		if args['cover']:
