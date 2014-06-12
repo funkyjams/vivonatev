@@ -1,13 +1,15 @@
 #!/bin/env python2.7
-# Revive: Vivonatev 0.2.2 (bam2fastq branch)
-#
-# A python program that which automates mapping, filtering 
-# and generating coverage vectors
+# Revive: Vivonatev 0.3.0
+# 
+# A python program that which automates mapping, filtering, 
+# extracting reads and generating coverage vectors from 
+# references genomes
+
+__version__ = "0.3.0"
 
 
 
-
-#### Custom Exceptions: ####
+#========== Custom Exceptions: ==========#
 class VivonatevException(Exception):
 	def __init__(self, message):
 		self.message = message
@@ -23,14 +25,16 @@ class IncompleteLog(VivonatevException):
 		self.message = message
 
 
-#### Custom Functions ####
+#========== Defined Functions ==========#
 def exit(string, parser):
+	"""Exit in Style ( and helpfully)"""
 	print string
 	parser.print_help()
 	sys.exit()
 
 
 def shellrun(cmd, out):
+	"""Run Command, write output to file"""
 	out = open(out, 'w')
 	
 	process = subprocess.Popen(cmd.split(), stdout=out, stderr=subprocess.PIPE)
@@ -39,6 +43,7 @@ def shellrun(cmd, out):
 
 
 def run(cmd, logfile):
+	"""Run command, write output to logfile"""
 	logfile.write("Running: " + cmd + '\n')
 	
 	process = subprocess.Popen(cmd.split(), stdout=logfile, stderr=logfile)
@@ -47,6 +52,7 @@ def run(cmd, logfile):
 
 
 def isBelowThreshold(logpath, threshold):
+	""" Check if mapping is above or below a certain percentage (threshold)"""
 	if threshold == 0:
 		return False
 
@@ -65,6 +71,8 @@ def isBelowThreshold(logpath, threshold):
 
 
 def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
+	"""Map reads to reference using bowti2, then perform other actions (extract, filter and cover)"""
+
 	log = open(log_path, 'w+')
 
 	cores = str(args['cores'])
@@ -80,7 +88,7 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 	print 'Mapping: ' + ref_name
 	run(bowtiecmd, log)
 
-	if not (args['filter'] or args['cover']):
+	if not (args['filter'] or args['cover'] or args['extract']):
 		log.write('No other action to take.\n')
 	elif isBelowThreshold(log_path, args['threshold']):
 		log.write('Mapping ratio below threshold. Cancelling filtering / covering\n')	
@@ -88,6 +96,16 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 	else:
 		bamcmd = "samtools view -@ " + cores + " -bS -o temp.bam temp.sam"
 		run(bamcmd, log)
+
+		if args['extract']:
+			print 'Extracting'
+			extractcmd = "samtools view -b -F 4 temp.bam -o temp.mapped.bam -@ " + cores
+			convertcmd = "bam2fastq -o map_" + ref_name + ".fq temp.mapped.bam"
+
+			run(extractcmd, log)
+			run(convertcmd, log)
+			run("rm temp.mapped.bam", log)
+
 
 		if args['filter']:
 			print 'Filtering'
@@ -118,7 +136,7 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 
 		run('rm temp.bam', log)
 
-	run('rm -v temp.sam', log)
+	run('rm temp.sam', log)
 	log.close()
 	
 
@@ -126,7 +144,7 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 def main(args):
 	"""" Main function """
 	
-	### Redefine arguments
+	### Reorganinze arguments
 	if not args['directory'] is '':
 		dir = args['directory']
 	else:
@@ -138,9 +156,9 @@ def main(args):
 
 	# Verify validity 
 	if (not os.path.isdir(dir)):
-		raise ArgumentError('directory ' + dir + ' does not exist')
+		raise ArgumentError('Directory ' + dir + ' does not exist')
 	elif (not os.path.exists(name_index_path)):
-		raise ArgumentError('file ' + name_index_path + ' does not exist')
+		raise ArgumentError('File ' + name_index_path + ' does not exist')
 
 
 	## Copy input to temp file
@@ -155,37 +173,38 @@ def main(args):
 	# Find References
 	name_index = open(name_index_path, 'r')
 	names = name_index.readlines()
-
+	
 	for line in names:
-		ref_line = line.split()
+		if not line[0] is '#':
+			ref_line = line.split()
 
-		ref_name = ref_line[0]
-		ref_path = ref_line[1]
-		if ref_path[0] != '/':
-			ref_path = dir + ref_path
-		if len(ref_line) > 2:
-			ref_length = ref_line[2]
-		else:
-			ref_length = 0
-		
-		if args['keep_log']:
-			log_path = 'log_' + ref_name
-		else:
-			log_path = 'temp.log_' + ref_name
+			ref_name = ref_line[0]
+			ref_path = ref_line[1]
+			if ref_path[0] != '/':
+				ref_path = dir + ref_path
+			if len(ref_line) > 2:
+				ref_length = ref_line[2]
+			else:
+				ref_length = 0
+			
+			if args['keep_log']:
+				log_path = 'log_' + ref_name
+			else:
+				log_path = 'temp.log_' + ref_name
 
 
-		try:
-			map2Ref(ref_name, ref_path, ref_length, log_path, dir, args)
-			if not args['keep_log']:
-				run('rm ' + log_path, sys.stdout)
+			try:
+				map2Ref(ref_name, ref_path, ref_length, log_path, dir, args)
+				if not args['keep_log']:
+					run('rm ' + log_path, sys.stdout)
 
-		except IncompleteLog as e:
-			run('rm *.sam *.bam', sys.stdout)
-			print 'Bowtie2 mapping appears to have failed'
-			print e 		
-		except VivonatevException as e:
-			run('rm *.sam *.bam', sys.stderr)
-			print e
+			except IncompleteLog as e:
+				run('rm *.sam *.bam', sys.stdout)
+				print 'Bowtie2 mapping appears to have failed'
+				print e 		
+			except VivonatevException as e:
+				run('rm *.sam *.bam', sys.stderr)
+				print e
 	
 
 	unlog = open('/dev/null', 'a')
@@ -205,7 +224,7 @@ def main(args):
 
 
 
-#### Main ####
+#========== Main ==========#
 
 if __name__ == "__main__":
 	
@@ -216,7 +235,7 @@ if __name__ == "__main__":
 	import subprocess
 
 
-	parser = argparse.ArgumentParser(description = 'Pipeline project 0.2.2',
+	parser = argparse.ArgumentParser(description = 'Vivonatev, a NGS Mapping pipeline',
 						prog='revive', usage='%(prog)s {-i input / -m1 input_1 -m2 input_2} {action[s]} [options]',
 						formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position = 75, width = 200),
 						add_help=False)
@@ -226,17 +245,21 @@ if __name__ == "__main__":
 	required.add_argument('-m1', '--mate-1', default = '', help = 'Paired input reads, mate 1')
 	required.add_argument('-m2', '--mate-2', default = '', help = 'Paired input reads, mate 2')
 
-	actions = parser.add_argument_group('Action arguments (>1 required)')
-	actions.add_argument('-L', '--keep-log', action = 'store_true', help = '')
-	actions.add_argument('-F', '--filter', action = 'store_true', help = '')
-	actions.add_argument('-C', '--cover', action = 'store_true', help = '')
+	actions = parser.add_argument_group('Action arguments (>=1 required)')
+	actions.add_argument('-L', '--keep-log', action = 'store_true', help = 'Keep a log of mapping, and other actions, if any')
+	actions.add_argument('-F', '--filter', action = 'store_true', help = 'Filter-out the reads mapped to reference')
+	actions.add_argument('-C', '--cover', action = 'store_true', help = 'Generate a coverage vector of reference')
+	actions.add_argument('-E', '--extract', action = 'store_true', help = 'Extract mapped reads to separate file')
 	
+	actions.add_argument('-v', '--version', action = 'version', version = "Vivonatev ("+__version__+")")
+	actions.add_argument('-h', '--help', action='help', help = 'Show this helpful message')
+
+
 	optional = parser.add_argument_group('Optional Arguments')
-	optional.add_argument('-h', '--help', action='help', help = 'This helpful message')
-	optional.add_argument('-d', '--directory', default = '', help = '')
-	optional.add_argument('-n', '--name-index', default = '', help = '')
-	optional.add_argument('-c', '--cores', type = int, default = 2, help = '')
-	optional.add_argument('-t', '--threshold', type = float, default = 0, help = '')
+	optional.add_argument('-d', '--directory', default = '', help = 'Directory where bt2 indexes are found (default: current working dir)')
+	optional.add_argument('-n', '--name-index', default = '', help = 'File listing the references to map (default: \'name_index\' in directory)')
+	optional.add_argument('-c', '--cores', type = int, default = 2, help = 'Threads to use when running bowtie2 and samtools (default: 2)')
+	optional.add_argument('-t', '--threshold', type = float, default = 0, help = 'Threshold mapping (in percentage) to perform -E, -F or -C action (default: 0)')
 
 
 	args = vars(parser.parse_args())
@@ -246,7 +269,10 @@ if __name__ == "__main__":
 	if (args['input'] is ''):
 		if (args['mate_1'] is '' or args['mate_2'] is ''):
 			exit('Input(s) must be specified', parser)
-	if not (args['keep_log'] or args['filter'] or args['cover']):
+	if (not args['input'] is '' and (not args['mate_1'] is '' or not args['mate_2'] is '')):
+		exit('Either use -i, or -m1 and -m2', parser)
+
+	if not (args['keep_log'] or args['filter'] or args['cover'] or args['extract']):
 		exit('At least one action must be specified', parser)
 	
 	try:

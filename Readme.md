@@ -5,11 +5,10 @@ Vivonatev
 ## Description:
 This is the work in progress for an alignment pipeline for bowtie2. This pipeline will be able to match a fastq file to a number of reference genomes. Features include:
 * Ability to recursively filter each reference genome
+* Can Extract positively mapped reads 
 * Generate coverage vector of each genome
 * Threshold for filtering and generating coverage vector (saves a lot of time)
 
-### Branch:
-This branch uses bam2fastq instead to picardtools to transform the bam file into fastq.
 
 ## Revive
 Revive is the new redesigned pipeline.
@@ -27,11 +26,13 @@ Paired fastq input files
 
 #### Actions
 ##### -L 
-Keeps the log for each reference instead of deleting them
+Keeps the log for each reference instead of deleting them (log_refname)
 ##### -F 
 Filters out all mapped read for each reference
 ##### -C
-Genereage coverage vector for each reference
+Genereage coverage vector for each reference (refname_cov.vec)
+##### -E 
+Extract the reads mapped to reference in separate file (map_refname.fq)
 
 ##### Optional:
 ###### -d <directory>
@@ -51,21 +52,24 @@ Name_index is the file containing the information on which references to map. Fo
 | hiv         | AF_033819.fa | 9315       |
 | ebv         | NC_007605.fa | 174280     |
 
+The reference fasta can be defined with an absolute path if necessary, otherwise Revive will look in the current directory. The 
+index file can include comments (starting with #).
 
 
 ### Requirements:
 * Bowtie2
 * Samtools
-* picard-tools
+* Bam2fastq (from Hudson Alpha)
 * python2.7
 
 
 ### Installation
-You can move the executable to your path. 
-Before running, you MUST change line 7 to match where picard-tools is installed on your computer.  
+To install Vivonatev, you can simply move the executables to your path (~/bin/, /usr/local/bin/ or other). 
 
 
 ## Other Scripts
+These other scripts may be helpful when working with Vivonatev.
+
 ### isAboveThreshold
 Simple script the check if a mapping is above a certain treshold. Uses the output of bowtie2.
 Can be usefull when selecting which references to filter/cover.
@@ -79,7 +83,7 @@ Small script designed to generate the name_index
 usage: 
     btindexer name_index ref_name ref_fasta
 
+
 ## Future Improvements
 * Implement option for other alignment tool (maybe bwa?)
-* Implement comments in name_index
-* Option for positive filtering. (keep mapping in separate output file)
+* Quiet mode (keep output to a minimal)
