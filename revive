@@ -1,12 +1,10 @@
 #!/bin/env python2.7
-# Revive: Vivonatev 0.2.2
+# Revive: Vivonatev 0.2.2 (bam2fastq branch)
 #
 # A python program that which automates mapping, filtering 
 # and generating coverage vectors
 
 
-#### Picardtools path
-pcd = "java -jar /opt/picard-tools-1.109/"
 
 
 #### Custom Exceptions: ####
@@ -98,12 +96,12 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 
 			if not args['input'] is '':
 				run('rm temp.fq', log)
-				picardcmd = pcd + "/SamToFastq.jar I=temp-unmapped.bam F=temp.fq"
+				bam2fastqcmd = "bam2fastq -o temp#.fq temp-unmapped.bam"
 			else:
 				run('rm temp_1.fq temp_2.fq', log)
-				picardcmd = pcd + "/SamToFastq.jar I=temp-unmapped.bam F=temp_1.fq F2=temp_2.fq FU=/dev/null"
+				bam2fastqcmd = "bam2fastq -o temp#.fq temp-unmapped.bam"
 			
-			run(picardcmd, log)
+			run(bam2fastqcmd, log)
 			run('rm temp-unmapped.bam', log)
 
 		if args['cover']:
