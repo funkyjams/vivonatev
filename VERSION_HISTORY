@@ -23,4 +23,16 @@ Threshold function now searches for 'overall alignment' line.
 Fixed bug which caused temp.sam to not be removed if the references was not
 filtered or covered.
 
+0.2.4: Bam2fastq branch
+This branch is a fork of 0.2.2 which uses Hudson Alpha's bam2fastq to replace 
+picardtools' SamToFastq.jar (slow).
+(Other fork uses tophat)
+--> Merged into master
+
+
+0.3.0: Introducing: extract action
+Now has the ability to extract reads positively matched to the references.
+Also allowing comments (start with #) in name-index.
+Can now use -v to find Revive version
+Bug fixes, cleaned up code.
 

@@ -3,15 +3,18 @@ Vivonatev
 
 
 ## Description:
-This is the work in progress for an alignment pipeline for bowtie2. This pipeline will be able to match a fastq file to a number of reference genomes. Features include:
-* Ability to recursively filter each reference genome
-* Can Extract positively mapped reads 
+Vivonatev is a NGS mapping pipeline using Bowtie2 and Samtools. This pipeline can match NGS reads to large amounts of 
+reference genomes. Features include:
+
+* Can map both single-end and paired-end NGS reads
+* Ability to recursively filter out each reference genome
+* Extract positively mapped reads 
 * Generate coverage vector of each genome
 * Threshold for filtering and generating coverage vector (saves a lot of time)
 
 
 ## Revive
-Revive is the new redesigned pipeline.
+Revive is the name of the pipeline executable:
 
 usage: revive {-i input / -1 mate_1 -2 mate_2} {action[s]} [options]
 
