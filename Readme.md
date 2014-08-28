@@ -46,6 +46,11 @@ File containing the refence names in '-d' to map to. default is 'directory/name_
 Threshold. Limits -C and -F options to reads that mapped to at least x% of input file. (def 0)
 ###### -c N
 Allows the user to specify the number of cores when running samtools and  (def 2)
+###### -bp " --bowtie2-arguments"
+Lets the use chooose more specific options when running bowtie2. Because of python\'s argument parsing, it must always include quotes and start with an empty space.
+For example, use -bp " --end-to-end" or -bp " --very-sensitive". Do not use this to specify the number of threads.
+
+
 
 ### Name_index Format
 Name_index is the file containing the information on which references to map. Format:

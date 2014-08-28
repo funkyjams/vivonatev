@@ -5,7 +5,7 @@
 # extracting reads and generating coverage vectors from 
 # references genomes
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 
 
@@ -76,14 +76,15 @@ def map2Ref(ref_name, ref_path, ref_length, log_path, dir, args):
 	log = open(log_path, 'w+')
 
 	cores = str(args['cores'])
+	param = args['bowtie_param']
 	# mode = "--end-to-end"
-	mode = "--local"
+	# mode = "--local"
 
 	# Bowtie2 Mapping
 	if (not args['input'] is ''):
-		bowtiecmd = "bowtie2 -S temp.sam " + mode + " -p " + cores + " -U temp.fq -x " + dir + ref_name
+		bowtiecmd = "bowtie2 -S temp.sam " + param + " -p " + cores + " -U temp.fq -x " + dir + ref_name
 	else:
-		bowtiecmd = "bowtie2 -S temp.sam " + mode + " -p " + cores + " -1 temp_1.fq -2 temp_2.fq -x " + dir + ref_name
+		bowtiecmd = "bowtie2 -S temp.sam " + param + " -p " + cores + " -1 temp_1.fq -2 temp_2.fq -x " + dir + ref_name
 
 	print 'Mapping: ' + ref_name
 	run(bowtiecmd, log)
@@ -260,6 +261,9 @@ if __name__ == "__main__":
 	optional.add_argument('-n', '--name-index', default = '', help = 'File listing the references to map (default: \'name_index\' in directory)')
 	optional.add_argument('-c', '--cores', type = int, default = 2, help = 'Threads to use when running bowtie2 and samtools (default: 2)')
 	optional.add_argument('-t', '--threshold', type = float, default = 0, help = 'Threshold mapping (in percentage) to perform -E, -F or -C action (default: 0)')
+
+	optional.add_argument('-bp', '--bowtie_param', default = '--end-to-end', help = 'Bowtie2 extra parameters (def: \'--local\'). Run bowtie2 -h for more info ')
+	optional.add_argument('-Q', '--quiet_mode', action = 'store_true', help = 'Only outputs critical information') 
 
 
 	args = vars(parser.parse_args())

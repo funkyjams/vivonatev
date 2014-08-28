@@ -1,0 +1,56 @@
+#!/bin/env python2.7
+# Revive: Vivonatev 0.2.0
+#
+# A python program that which automates mapping, filtering and 
+
+if __name__ == "__main__":
+	
+	import os
+	import re
+	import sys
+	import argparse
+	import subprocess
+	import revive
+
+
+	parser = argparse.ArgumentParser(description = 'Pipeline project 0.2.0',
+						prog='revive', usage='%(prog)s {-i input / -m1 input_1 -m2 input_2} {action[s]} [options]',
+						formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position = 75, width = 200),
+						add_help=False)
+	
+	required = parser.add_argument_group('Required Arguments')	
+	required.add_argument('-i', '--input', default = '', help = 'Non-paired input reads')
+	required.add_argument('-m1', '--mate-1', default = '', help = 'Paired input reads, mate 1')
+	required.add_argument('-m2', '--mate-2', default = '', help = 'Paired input reads, mate 2')
+
+	actions = parser.add_argument_group('Action arguments (>1 required)')
+	actions.add_argument('-L', '--keep-log', action = 'store_true', help = '')
+	actions.add_argument('-F', '--filter', action = 'store_true', help = '')
+	actions.add_argument('-C', '--cover', action = 'store_true', help = '')
+	
+	optional = parser.add_argument_group('Optional Arguments')
+	optional.add_argument('-h', '--help', action='help', help = 'This helpful message')
+	optional.add_argument('-d', '--directory', default = '', help = '')
+	optional.add_argument('-n', '--name-index', default = '', help = '')
+	optional.add_argument('-c', '--cores', type = int, default = 2, help = '')
+	optional.add_argument('-t', '--threshold', type = int, default = 0, help = '')
+
+
+	args = vars(parser.parse_args())
+
+
+	## Check Input Validity ##
+	if (args['input'] is ''):
+		if (args['mate_1'] is '' or args['mate_2'] is ''):
+			exit('Input(s) must be specified', parser)
+	if not (args['keep_log'] or args['filter'] or args['cover']):
+		exit('At least one action must be specified', parser)
+	
+	try:
+		main(args)
+	except ArgumentError as e:
+		print e
+	finally:
+		print "Over"	
+
+	

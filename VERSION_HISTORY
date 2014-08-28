@@ -36,3 +36,8 @@ Also allowing comments (start with #) in name-index.
 Can now use -v to find Revive version
 Bug fixes, cleaned up code.
 
+0.3.1: Bowtie2 parameters
+Includes an argument to include other bowtie2 parameters when running
+alignement
+Also includes count-nucleotide, which counts the nucleotides of a fasta file.
+Fixed an issue with btindexer which results in wrong nucelotide count.

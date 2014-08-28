@@ -1,0 +1,19 @@
+#!/bin/bash
+
+if [[ $1 == "" ]]; then
+	echo "Usage: count-nucletide file.fasta"
+	exit 0
+fi
+
+file=$1
+
+total_char=$(grep -v ">" $file | wc -m)
+num_lines=$(wc -l $file | awk '{print $1}')
+num_reads=$(grep ">" $file | wc -l)
+
+# echo $total_char
+# echo $num_lines
+# echo $num_reads
+
+echo $(( $total_char - $(( $num_lines - $num_reads)) ))
+

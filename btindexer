@@ -11,7 +11,7 @@ ref_name=$2
 ref_fasta=$3
 
 
-genlen=$(cat $ref_fasta | grep -v ">" | wc -m)
+genlen=$(count-nucleotide $fasta)
 
 bowtie2-build $ref_fasta $ref_name
 echo $ref_name $ref_fasta $genlen >> $name_index
